@@ -4,38 +4,38 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
-
-
   }
-  backend "s3" {
-    bucket = "aws-terraform-s3"
-    key    = "state/terraform.tfstate"
-    region = var.region
-  }
+
+  # backend "s3" {
+  #   bucket = "aws-terraform-vinicius-study"
+  #   key    = "state/terraform.tfstate"
+  #   region = "us-east-1"
+  # }
 }
+
 
 provider "aws" {
   region  = var.region
   profile = var.profile
 }
 
+
+locals {
+  state_bucket_name = "aws-terraform-vinicius-study"
+  common_tags = {
+    IAC     = "True"
+    Project = "Terraform Study"
+  }
+}
+
+
 resource "aws_s3_bucket" "terraform_state" {
-  bucket        = "aws-terraform"
+  bucket        = local.state_bucket_name
   force_destroy = true
 
-  lifecycle {
-    prevent_destroy = true
-  }
-
-  tags = {
-    IAC = "True"
-  }
+  tags = local.common_tags
 }
 
-resource "aws_s3_bucket_acl" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-  acl    = "private"
-}
 
 resource "aws_s3_bucket_versioning" "versioning_terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
