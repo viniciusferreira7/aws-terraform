@@ -58,7 +58,13 @@ variable "container_name" {
 variable "container_image" {
   type        = string
   description = "Docker image to deploy (from ECR)"
+  default     = ""
   # Example: "123456789012.dkr.ecr.us-east-1.amazonaws.com/dev-terraform-study-app:latest"
+
+  validation {
+    condition     = var.container_image != ""
+    error_message = "container_image must be set after pushing your image to ECR. See README.md deployment guide for instructions."
+  }
 }
 
 variable "container_port" {

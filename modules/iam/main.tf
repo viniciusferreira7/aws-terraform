@@ -74,27 +74,29 @@ resource "aws_iam_role" "ecs_task" {
 
 # Application-specific permissions (customize based on your needs)
 resource "aws_iam_role_policy" "ecs_task_app" {
+  count = length(var.app_s3_bucket_arns) > 0 || length(var.app_secrets_arns) > 0 ? 1 : 0
+
   name = "${var.environment}-ecs-task-app-policy"
   role = aws_iam_role.ecs_task.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
+    Statement = concat(
+      length(var.app_s3_bucket_arns) > 0 ? [{
         Effect = "Allow"
         Action = [
           "s3:GetObject",
           "s3:PutObject"
         ]
         Resource = var.app_s3_bucket_arns
-      },
-      {
+      }] : [],
+      length(var.app_secrets_arns) > 0 ? [{
         Effect = "Allow"
         Action = [
           "secretsmanager:GetSecretValue"
         ]
         Resource = var.app_secrets_arns
-      }
-    ]
+      }] : []
+    )
   })
 }

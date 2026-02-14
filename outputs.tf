@@ -59,7 +59,7 @@ output "ecs_task_definition_family" {
 
 output "cloudwatch_log_group_name" {
   description = "Name of the CloudWatch log group for ECS logs"
-  value       = module.ecs.cloudwatch_log_group_name
+  value       = aws_cloudwatch_log_group.ecs.name
 }
 
 # IAM Outputs

@@ -10,14 +10,6 @@ resource "aws_ecs_cluster" "main" {
   tags = var.tags
 }
 
-# CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "ecs" {
-  name              = "/ecs/${var.environment}-${var.service_name}"
-  retention_in_days = var.log_retention_days
-
-  tags = var.tags
-}
-
 # ECS Task Definition
 resource "aws_ecs_task_definition" "app" {
   family                   = "${var.environment}-${var.service_name}"
@@ -58,7 +50,7 @@ resource "aws_ecs_task_definition" "app" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.ecs.name
+          "awslogs-group"         = var.cloudwatch_log_group
           "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "ecs"
         }
@@ -91,14 +83,12 @@ resource "aws_ecs_service" "app" {
     container_port   = var.container_port
   }
 
-  deployment_configuration {
-    maximum_percent         = 200
-    minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 100
 
-    deployment_circuit_breaker {
-      enable   = true
-      rollback = true
-    }
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
   }
 
   enable_execute_command = var.enable_execute_command

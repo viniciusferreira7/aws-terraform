@@ -15,6 +15,11 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "cloudwatch_log_group" {
+  description = "Name of the CloudWatch log group (created externally)"
+  type        = string
+}
+
 # Networking
 variable "private_subnet_ids" {
   description = "List of private subnet IDs for ECS tasks"
@@ -134,13 +139,6 @@ variable "autoscaling_memory_target" {
   description = "Target memory utilization percentage for auto-scaling"
   type        = number
   default     = 80
-}
-
-# CloudWatch Logs
-variable "log_retention_days" {
-  description = "CloudWatch log retention in days"
-  type        = number
-  default     = 7
 }
 
 # Features

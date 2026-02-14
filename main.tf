@@ -19,6 +19,27 @@ resource "aws_s3_bucket_versioning" "versioning_terraform_state" {
   }
 }
 
+# S3 bucket encryption
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Block public access to state bucket
+resource "aws_s3_bucket_public_access_block" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 # DynamoDB table for state locking
 resource "aws_dynamodb_table" "terraform_state_lock" {
   name         = "terraform-state-lock"
@@ -29,6 +50,14 @@ resource "aws_dynamodb_table" "terraform_state_lock" {
     name = "LockID"
     type = "S"
   }
+
+  tags = local.common_tags
+}
+
+# CloudWatch Log Group for ECS (created here to avoid circular dependency)
+resource "aws_cloudwatch_log_group" "ecs" {
+  name              = "/ecs/${var.environment}-${local.service_name}"
+  retention_in_days = var.log_retention_days
 
   tags = local.common_tags
 }
@@ -75,15 +104,13 @@ module "iam" {
   source = "./modules/iam"
 
   environment              = var.environment
-  cloudwatch_log_group_arn = module.ecs.cloudwatch_log_group_arn
+  cloudwatch_log_group_arn = aws_cloudwatch_log_group.ecs.arn
 
   # Optional: Add S3 buckets or secrets your app needs
   app_s3_bucket_arns = var.app_s3_bucket_arns
   app_secrets_arns   = var.app_secrets_arns
 
   tags = local.common_tags
-
-  depends_on = [module.ecs]
 }
 
 # ALB Module - Application Load Balancer
@@ -113,9 +140,10 @@ module "alb" {
 module "ecs" {
   source = "./modules/ecs"
 
-  environment  = var.environment
-  service_name = local.service_name
-  aws_region   = var.region
+  environment           = var.environment
+  service_name          = local.service_name
+  aws_region            = var.region
+  cloudwatch_log_group  = aws_cloudwatch_log_group.ecs.name
 
   # Networking
   private_subnet_ids    = module.networking.private_subnet_ids
@@ -151,7 +179,6 @@ module "ecs" {
 
   # Monitoring
   enable_container_insights = var.enable_container_insights
-  log_retention_days        = var.log_retention_days
   enable_execute_command    = var.enable_execute_command
 
   tags = local.common_tags
